@@ -15,7 +15,7 @@ plugins:
     type: bool
 
   video_watermark_image_url:
-    default: "../assets/watermark.png"
+    default: "../assets/watermark.jpeg"
     client: true
     type: url
 
