@@ -1,0 +1,41 @@
+plugins:
+  video_watermark_enabled:
+    default: true
+    client: true
+    type: bool
+
+  video_watermark_text:
+    default: ""
+    client: true
+    type: string
+
+  video_watermark_use_image:
+    default: true
+    client: true
+    type: bool
+
+  video_watermark_image_url:
+    default: "../assets/watermark.png"
+    client: true
+    type: url
+
+  video_watermark_position:
+    default: "10:10"   # "x:y"
+    client: true
+    type: string
+
+  video_watermark_fontsize:
+    default: 40
+    client: true
+    type: integer
+
+  video_watermark_opacity:
+    default: 1.0
+    client: true
+    type: float
+
+  # Run watermark job inline i.e. run as soon as the upload is done (dev convenience)
+  video_watermark_inline:
+    default: true
+    client: true
+    type: bool
