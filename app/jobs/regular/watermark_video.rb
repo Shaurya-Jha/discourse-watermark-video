@@ -5,7 +5,7 @@ module ::Jobs
 
     # Absolute path to plugins/discourse-watermark-video/assets/watermark.png
     WATERMARK_IMAGE_PATH =
-      Rails.root.join("plugins", "discourse-watermark-video", "assets", "watermark.png").to_s
+      Rails.root.join("plugins", "discourse-watermark-video", "assets", "watermark.jpeg").to_s
 
     def execute(args)
       upload_id = args[:upload_id]
