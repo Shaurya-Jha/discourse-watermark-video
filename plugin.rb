@@ -27,7 +27,7 @@ module ::DiscourseWatermarkVideo
 end
 
 after_initialize do
-  require_relative "lib/discourse_video_watermark/ffmpeg_command"
+  require_relative "lib/discourse_watermark_video/ffmpeg_command"
   require_relative "jobs/regular/watermark_video"
   # require_relative "jobs/regular/watermark_video_external" # if you added the external job
 
