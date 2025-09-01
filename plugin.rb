@@ -28,7 +28,7 @@ end
 
 after_initialize do
   require_relative "lib/discourse_watermark_video/ffmpeg_command"
-  require_relative "jobs/regular/watermark_video"
+  require_relative "app/jobs/regular/watermark_video"
   # require_relative "jobs/regular/watermark_video_external" # if you added the external job
 
   add_model_callback(:upload, :after_create_commit) do
