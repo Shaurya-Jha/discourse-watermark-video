@@ -30,6 +30,12 @@ after_initialize do
   require_relative "lib/discourse_watermark_video/ffmpeg_command"
   require_relative "app/jobs/regular/watermark_video"
   # require_relative "jobs/regular/watermark_video_external" # if you added the external job
+  register_asset "javascripts/discourse/initializers/watermark-upload.js"
+  
+  # Mount the engine (backend routes)
+  Discourse::Application.routes.append do
+    mount ::DiscourseWatermarkVideo::Engine, at: "/watermark"
+  end
 
   add_model_callback(:upload, :after_create_commit) do
     next unless SiteSetting.video_watermark_enabled
