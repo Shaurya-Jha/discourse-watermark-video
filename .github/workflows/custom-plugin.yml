@@ -1,0 +1,124 @@
+name: Custom Discourse Plugin
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        required: false
+      name:
+        type: string
+        required: false
+      core_ref:
+        type: string
+        required: false
+        default: "tests-passed"
+      runs_on:
+        type: string
+        required: false
+        default: "ubuntu-latest"
+      container:
+        type: string
+        required: false
+    secrets:
+      ssh_private_key:
+        description: "Optional SSH private key to be used when cloning additional plugin repos"
+        required: false
+
+concurrency:
+  group: custom-plugin-${{ format('{0}-{1}-{2}', github.head_ref || github.run_number, github.job, inputs.core_ref) }}
+  cancel-in-progress: true
+
+env:
+  JS_PKG_MANAGER_NULL_VALUE: "none"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  linting:
+    runs-on: ${{ inputs.runs_on }}
+    container: ${{ inputs.container || 'discourse/discourse_test:slim' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+
+      - name: Determine JS package manager
+        id: js-pkg-manager
+        run: |
+          if [ -f yarn.lock ]; then
+            echo "Using Yarn"
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+          elif [ -f pnpm-lock.yaml ]; then
+            echo "Using pnpm"
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "No JS package manager detected"
+            echo "manager=${{ env.JS_PKG_MANAGER_NULL_VALUE }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install JS dependencies
+        if: steps.js-pkg-manager.outputs.manager != env.JS_PKG_MANAGER_NULL_VALUE
+        run: ${{ steps.js-pkg-manager.outputs.manager }} install --frozen-lockfile
+
+      - name: Bundle install
+        run: bundle install
+
+      - name: Check for .es6 files
+        if: ${{ !cancelled() }}
+        run: |
+          if find . -type f -name '*.js.es6' | grep -q "."; then
+            echo ".js.es6 files are no longer supported by this workflow. Rename them to '.js'"
+            exit 1
+          fi
+
+      - name: ESLint
+        if: ${{ !cancelled() && steps.js-pkg-manager.outputs.manager != env.JS_PKG_MANAGER_NULL_VALUE }}
+        run: |
+          if test -f eslint.config.mjs; then
+            # modern flat config. No --ext needed
+            ${{ steps.js-pkg-manager.outputs.manager }} eslint --no-error-on-unmatched-pattern {test,assets,admin/assets}/javascripts
+          else
+            ${{ steps.js-pkg-manager.outputs.manager }} eslint --ext .js,.gjs --no-error-on-unmatched-pattern {test,assets,admin/assets}/javascripts
+          fi
+
+      - name: Stylelint
+        if: ${{ !cancelled() && steps.js-pkg-manager.outputs.manager != env.JS_PKG_MANAGER_NULL_VALUE }}
+        run: |
+          if test -f stylelint.config.mjs; then
+            pnpm stylelint --allow-empty-input "assets/**/*.scss"
+          fi
+
+      - name: Prettier
+        if: ${{ !cancelled() && steps.js-pkg-manager.outputs.manager != env.JS_PKG_MANAGER_NULL_VALUE }}
+        run: |
+          ${{ steps.js-pkg-manager.outputs.manager }} prettier --version
+          if [ -n "$(find assets -type f \( -name '*.scss' -or -name '*.js' -or -name '*.gjs' -or -name '*.hbs' \) 2>/dev/null)" ]; then
+            ${{ steps.js-pkg-manager.outputs.manager }} prettier --check "assets/**/*.{scss,js,gjs,hbs}"
+          fi
+          if [ -n "$(find admin/assets -type f \( -name '*.scss' -or -name '*.js' -or -name '*.gjs' -or -name '*.hbs' \) 2>/dev/null)" ]; then
+            ${{ steps.js-pkg-manager.outputs.manager }} prettier --check "admin/assets/**/*.{scss,js,gjs,hbs}"
+          fi
+          if [ 0 -lt "$(find test -type f \( -name '*.js' -or -name '*.gjs' \) 2> /dev/null | wc -l)" ]; then
+            ${{ steps.js-pkg-manager.outputs.manager }} prettier --check "test/**/*.{js,gjs}"
+          fi
+
+      - name: Ember template lint
+        if: ${{ !cancelled() && steps.js-pkg-manager.outputs.manager != env.JS_PKG_MANAGER_NULL_VALUE }}
+        run: ${{ steps.js-pkg-manager.outputs.manager }} ember-template-lint --no-error-on-unmatched-pattern assets/javascripts admin/assets/javascripts
+
+      - name: Rubocop
+        if: ${{ !cancelled() }}
+        run: bundle exec rubocop .
+
+      - name: Syntax Tree
+        if: ${{ !cancelled() }}
+        run: |
+          if test -f .streerc; then
+            bundle exec stree check Gemfile $(git ls-files '*.rb') $(git ls-files '*.rake') $(git ls-files '*.thor')
+          else
+            echo "Stree config not detected for this repository. Skipping."
+          fi
