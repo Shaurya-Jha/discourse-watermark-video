@@ -9,4 +9,4 @@ on:
 jobs:
   ci:
     # uses: discourse/.github/.github/workflows/discourse-plugin.yml@v1
-    uses: ./custom-plugin.yml@v1
+    uses: ./.github/workflows/custom-plugin.yml
