@@ -57,9 +57,14 @@ module DiscourseVideoWatermark
 
     def self.download_temp(url)
       require "open-uri"
-      tf = Tempfile.new(["wm-", File.extname(URI.parse(url).path.presence || ".png")])
+      require "uri"
+      require "net/http"
+
+      url = URI.parse(url)    # sanitize and parse the URL
+
+      tf = Tempfile.new(["wm-", File.extname(url.path.presence || ".png")])
       tf.binmode
-      tf.write(URI.open(url, "rb") { |io| io.read })
+      tf.write(url.open(url, "rb") { |io| io.read })
       tf.flush
       tf.path  # caller does not unlink; ok for short-lived dev jobs
     rescue => e
